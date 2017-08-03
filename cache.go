@@ -157,6 +157,13 @@ func (cache *Cache) Clear() {
 	}
 	atomic.StoreInt64(&cache.hitCount, 0)
 	atomic.StoreInt64(&cache.missCount, 0)
+	cache.lastStatus.TimeStamp = getCurrTimestamp()
+	cache.lastStatus.TimeRange = 0
+	cache.lastStatus.ExpiredCount = 0
+	cache.lastStatus.ItemsCount = 0
+	cache.lastStatus.HitCount = 0
+	cache.lastStatus.LookupCount = 0
+	cache.lastStatus.HitRate = 0
 }
 
 func (cache *Cache) ResetStatistics() {
@@ -167,6 +174,13 @@ func (cache *Cache) ResetStatistics() {
 		cache.segments[i].resetStatistics()
 		cache.segments[i].lock.Unlock()
 	}
+	cache.lastStatus.TimeStamp = getCurrTimestamp()
+	cache.lastStatus.TimeRange = 0
+	cache.lastStatus.ExpiredCount = 0
+	cache.lastStatus.ItemsCount = 0
+	cache.lastStatus.HitCount = 0
+	cache.lastStatus.LookupCount = 0
+	cache.lastStatus.HitRate = 0
 }
 
 func (cache *Cache) GetStatistics() *CacheStatus {
