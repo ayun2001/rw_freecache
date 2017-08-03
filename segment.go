@@ -95,7 +95,6 @@ func (seg *segment) set(key, value []byte, hashVal uint64, expireSeconds int) (e
 		hdr.slotId = slotId
 		hdr.hash16 = hash16
 		hdr.keyLen = uint16(len(key))
-
 		hdr.expireAt = expireAt
 		hdr.valLen = uint32(len(value))
 		if hdr.valCap >= hdr.valLen {
@@ -120,7 +119,6 @@ func (seg *segment) set(key, value []byte, hashVal uint64, expireSeconds int) (e
 		hdr.slotId = slotId
 		hdr.hash16 = hash16
 		hdr.keyLen = uint16(len(key))
-		//hdr.accessTime = now
 		hdr.expireAt = expireAt
 		hdr.valLen = uint32(len(value))
 		hdr.valCap = uint32(len(value))
@@ -161,7 +159,6 @@ func (seg *segment) evacuate(entryLen int64, slotId uint8, now uint32) (slotModi
 		oldEntryLen := ENTRY_HDR_SIZE + int64(oldHdr.keyLen) + int64(oldHdr.valCap)
 		if oldHdr.deleted {
 			consecutiveEvacuate = 0
-
 			seg.totalCount--
 			seg.vacuumLen += oldEntryLen
 			continue
@@ -173,7 +170,6 @@ func (seg *segment) evacuate(entryLen int64, slotId uint8, now uint32) (slotModi
 				slotModified = true
 			}
 			consecutiveEvacuate = 0
-			//seg.totalTime -= int64(oldHdr.accessTime)
 			seg.totalCount--
 			seg.vacuumLen += oldEntryLen
 			if expired {

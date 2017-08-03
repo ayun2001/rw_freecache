@@ -3,14 +3,29 @@ package freecache
 import (
 	"encoding/binary"
 	"sync/atomic"
-
 	"github.com/spaolacci/murmur3"
+	"time"
 )
 
+type CacheStatus struct {
+	TimeStamp,
+	TimeRange,
+	ItemsCount,
+	ExpiredCount,
+	HitCount,
+	LookupCount int64
+	HitRate float64
+}
+
+func getCurrTimestamp() int64 {
+	return int64(time.Now().Unix())
+}
+
 type Cache struct {
-	segments  [256]segment
-	hitCount  int64
-	missCount int64
+	segments   [256]segment
+	hitCount   int64
+	missCount  int64
+	lastStatus CacheStatus
 }
 
 func hashFunc(data []byte) uint64 {
@@ -29,6 +44,7 @@ func NewCache(size int) (cache *Cache) {
 	for i := 0; i < 256; i++ {
 		cache.segments[i] = newSegment(size/256, i)
 	}
+	cache.lastStatus = CacheStatus{TimeStamp: getCurrTimestamp()}
 	return
 }
 
@@ -151,4 +167,33 @@ func (cache *Cache) ResetStatistics() {
 		cache.segments[i].resetStatistics()
 		cache.segments[i].lock.Unlock()
 	}
+}
+
+func (cache *Cache) GetStatistics() *CacheStatus {
+	now := getCurrTimestamp()
+	currentStatus := CacheStatus{TimeStamp: now, TimeRange: now - cache.lastStatus.TimeStamp}
+	itemsCount := cache.EntryCount()
+	expiredCount := cache.ExpiredCount()
+	hitCount := cache.HitCount()
+	lookupCount := cache.LookupCount()
+	if currentStatus.TimeRange > 0 {
+		currentStatus.ExpiredCount = expiredCount - cache.lastStatus.ExpiredCount
+		currentStatus.ItemsCount = itemsCount - cache.lastStatus.ItemsCount
+		currentStatus.HitCount = hitCount - cache.lastStatus.HitCount
+		currentStatus.LookupCount = lookupCount - cache.lastStatus.LookupCount
+		if currentStatus.LookupCount != 0 {
+			currentStatus.HitRate = float64(currentStatus.HitCount) / float64(currentStatus.LookupCount)
+		} else {
+			currentStatus.HitRate = 0.0
+		}
+		cache.lastStatus.TimeStamp = now
+		cache.lastStatus.TimeRange = 0
+		cache.lastStatus.ExpiredCount = expiredCount
+		cache.lastStatus.ItemsCount = itemsCount
+		cache.lastStatus.HitCount = hitCount
+		cache.lastStatus.LookupCount = lookupCount
+		cache.lastStatus.HitRate = 0
+
+	}
+	return &currentStatus
 }

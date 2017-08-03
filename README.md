@@ -1,6 +1,4 @@
-# FreeCache2  - A cache library for Go with zero GC overhead and high concurrent performance.
-
-Based on Freecache modification, thanks to the original author and all the developers.
+# FreeCache - A cache library for Go with zero GC overhead and high concurrent performance.
 
 Long lived objects in memory introduce expensive GC overhead, With FreeCache, you can cache unlimited number of objects in memory 
 without increased latency and degraded throughput. 
@@ -9,10 +7,10 @@ without increased latency and degraded throughput.
 [![GoCover](http://gocover.io/_badge/github.com/coocood/freecache)](http://gocover.io/github.com/coocood/freecache)
 [![GoDoc](https://godoc.org/github.com/coocood/freecache?status.svg)](https://godoc.org/github.com/coocood/freecache)
 
-## Features (freecache) https://github.com/coocood/freecache
+## Features
 
 * Store hundreds of millions of entries
-* Zero GC overheadƒ
+* Zero GC overhead
 * High concurrent thread-safe access
 * Pure Go implementation
 * Expiration support
@@ -30,20 +28,6 @@ FreeCache should be many times faster than single lock protected built-in map.
     BenchmarkMapSet          2000000               861 ns/op
     BenchmarkCacheGet        3000000               517 ns/op
     BenchmarkMapGet         10000000               212 ns/op
-
-
-## Features (FreeCache2)
-
-* Modify the mutex in the Get method as Rwmutex to provide better query performance.
-* Delete access timer
-
-## Performance (FreeCache2)
-
-	BenchmarkCacheSet-8   	 5000000	       462 ns/op
-	BenchmarkMapSet-8     	 2000000	       756 ns/op
-	BenchmarkCacheGet-8   	 5000000	       395 ns/op
-	BenchmarkMapGet-8     	10000000	       177 ns/op
-	BenchmarkHashFunc-8   	50000000	        25.0 ns/op
 
 ## Example Usage
 
