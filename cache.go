@@ -11,9 +11,9 @@ type CacheStatus struct {
 	TimeStamp,
 	TimeRange,
 	ItemsCount,
-	ExpiredCount,
-	hitCount,
-	lookupCount int64
+	ExpiredCount int64
+	hitCount    int64        `json:"-"`
+	lookupCount int64        `json:"-"`
 	HitRate,
 	AvgLookupPerSecond,
 	AvgHitPerSecond float64
