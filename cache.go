@@ -14,7 +14,9 @@ type CacheStatus struct {
 	ExpiredCount,
 	HitCount,
 	LookupCount int64
-	HitRate float64
+	HitRate,
+	AvgLookupPerSecond,
+	AvgHitPerSecond float64
 }
 
 func getCurrTimestamp() int64 {
@@ -191,10 +193,12 @@ func (cache *Cache) GetStatistics() *CacheStatus {
 	hitCount := cache.HitCount()
 	lookupCount := cache.LookupCount()
 	if currentStatus.TimeRange > 0 {
-		currentStatus.ExpiredCount = expiredCount - cache.lastStatus.ExpiredCount
-		currentStatus.ItemsCount = itemsCount - cache.lastStatus.ItemsCount
+		currentStatus.ExpiredCount = expiredCount
+		currentStatus.ItemsCount = itemsCount
 		currentStatus.HitCount = hitCount - cache.lastStatus.HitCount
 		currentStatus.LookupCount = lookupCount - cache.lastStatus.LookupCount
+		currentStatus.AvgLookupPerSecond = float64(currentStatus.LookupCount) / float64(currentStatus.TimeRange)
+		currentStatus.AvgHitPerSecond = float64(currentStatus.HitCount) / float64(currentStatus.TimeRange)
 		if currentStatus.LookupCount != 0 {
 			currentStatus.HitRate = float64(currentStatus.HitCount) / float64(currentStatus.LookupCount)
 		} else {
