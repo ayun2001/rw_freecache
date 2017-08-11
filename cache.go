@@ -9,11 +9,11 @@ import (
 
 type CacheStatus struct {
 	TimeStamp,
-	TimeRange,
+	timeRange,
 	ItemsCount,
 	ExpiredCount,
-	HitCount,
-	LookupCount int64
+	hitCount,
+	lookupCount int64
 	HitRate,
 	AvgLookupPerSecond,
 	AvgHitPerSecond float64
@@ -160,11 +160,11 @@ func (cache *Cache) Clear() {
 	atomic.StoreInt64(&cache.hitCount, 0)
 	atomic.StoreInt64(&cache.missCount, 0)
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
-	cache.lastStatus.TimeRange = 0
+	cache.lastStatus.timeRange = 0
 	cache.lastStatus.ExpiredCount = 0
 	cache.lastStatus.ItemsCount = 0
-	cache.lastStatus.HitCount = 0
-	cache.lastStatus.LookupCount = 0
+	cache.lastStatus.hitCount = 0
+	cache.lastStatus.lookupCount = 0
 	cache.lastStatus.HitRate = 0
 }
 
@@ -177,39 +177,39 @@ func (cache *Cache) ResetStatistics() {
 		cache.segments[i].lock.Unlock()
 	}
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
-	cache.lastStatus.TimeRange = 0
+	cache.lastStatus.timeRange = 0
 	cache.lastStatus.ExpiredCount = 0
 	cache.lastStatus.ItemsCount = 0
-	cache.lastStatus.HitCount = 0
-	cache.lastStatus.LookupCount = 0
+	cache.lastStatus.hitCount = 0
+	cache.lastStatus.lookupCount = 0
 	cache.lastStatus.HitRate = 0
 }
 
 func (cache *Cache) GetStatistics() *CacheStatus {
 	now := getCurrTimestamp()
-	currentStatus := CacheStatus{TimeStamp: now, TimeRange: now - cache.lastStatus.TimeStamp}
+	currentStatus := CacheStatus{TimeStamp: now, timeRange: now - cache.lastStatus.TimeStamp}
 	itemsCount := cache.EntryCount()
 	expiredCount := cache.ExpiredCount()
 	hitCount := cache.HitCount()
 	lookupCount := cache.LookupCount()
-	if currentStatus.TimeRange > 0 {
+	if currentStatus.timeRange > 0 {
 		currentStatus.ExpiredCount = expiredCount
 		currentStatus.ItemsCount = itemsCount
-		currentStatus.HitCount = hitCount - cache.lastStatus.HitCount
-		currentStatus.LookupCount = lookupCount - cache.lastStatus.LookupCount
-		currentStatus.AvgLookupPerSecond = float64(currentStatus.LookupCount) / float64(currentStatus.TimeRange)
-		currentStatus.AvgHitPerSecond = float64(currentStatus.HitCount) / float64(currentStatus.TimeRange)
-		if currentStatus.LookupCount != 0 {
-			currentStatus.HitRate = float64(currentStatus.HitCount) / float64(currentStatus.LookupCount)
+		currentStatus.hitCount = hitCount - cache.lastStatus.hitCount
+		currentStatus.lookupCount = lookupCount - cache.lastStatus.lookupCount
+		currentStatus.AvgLookupPerSecond = float64(currentStatus.lookupCount) / float64(currentStatus.timeRange)
+		currentStatus.AvgHitPerSecond = float64(currentStatus.hitCount) / float64(currentStatus.timeRange)
+		if currentStatus.lookupCount != 0 {
+			currentStatus.HitRate = float64(currentStatus.hitCount) / float64(currentStatus.lookupCount)
 		} else {
 			currentStatus.HitRate = 0.0
 		}
 		cache.lastStatus.TimeStamp = now
-		cache.lastStatus.TimeRange = 0
+		cache.lastStatus.timeRange = 0
 		cache.lastStatus.ExpiredCount = expiredCount
 		cache.lastStatus.ItemsCount = itemsCount
-		cache.lastStatus.HitCount = hitCount
-		cache.lastStatus.LookupCount = lookupCount
+		cache.lastStatus.hitCount = hitCount
+		cache.lastStatus.lookupCount = lookupCount
 		cache.lastStatus.HitRate = 0
 
 	}
