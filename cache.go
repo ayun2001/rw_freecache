@@ -9,7 +9,7 @@ import (
 
 type CacheStatus struct {
 	TimeStamp,
-	TimeRange,
+	TimeSlice,
 	ItemsCount,
 	ExpiredCount int64
 	hitCount    int64        `json:"-"`
@@ -167,7 +167,7 @@ func (cache *Cache) Clear() {
 	atomic.StoreInt64(&cache.hitCount, 0)
 	atomic.StoreInt64(&cache.missCount, 0)
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
-	cache.lastStatus.TimeRange = 0
+	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ExpiredCount = 0
 	cache.lastStatus.ItemsCount = 0
 	cache.lastStatus.hitCount = 0
@@ -184,7 +184,7 @@ func (cache *Cache) ResetStatistics() {
 		cache.segments[i].lock.Unlock()
 	}
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
-	cache.lastStatus.TimeRange = 0
+	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ExpiredCount = 0
 	cache.lastStatus.ItemsCount = 0
 	cache.lastStatus.hitCount = 0
@@ -194,25 +194,25 @@ func (cache *Cache) ResetStatistics() {
 
 func (cache *Cache) GetStatistics() *CacheStatus {
 	now := getCurrTimestamp()
-	currentStatus := CacheStatus{TimeStamp: now, TimeRange: now - cache.lastStatus.TimeStamp}
+	currentStatus := CacheStatus{TimeStamp: now, TimeSlice: now - cache.lastStatus.TimeStamp}
 	itemsCount := cache.EntryCount()
 	expiredCount := cache.ExpiredCount()
 	hitCount := cache.HitCount()
 	lookupCount := cache.LookupCount()
 	currentStatus.ExpiredCount = expiredCount
 	currentStatus.ItemsCount = itemsCount
-	if currentStatus.TimeRange > 0 {
+	if currentStatus.TimeSlice > 0 {
 		currentStatus.hitCount = hitCount - cache.lastStatus.hitCount
 		currentStatus.lookupCount = lookupCount - cache.lastStatus.lookupCount
-		currentStatus.AvgLookupPerSecond = float64(currentStatus.lookupCount) / float64(currentStatus.TimeRange)
-		currentStatus.AvgHitPerSecond = float64(currentStatus.hitCount) / float64(currentStatus.TimeRange)
+		currentStatus.AvgLookupPerSecond = float64(currentStatus.lookupCount) / float64(currentStatus.TimeSlice)
+		currentStatus.AvgHitPerSecond = float64(currentStatus.hitCount) / float64(currentStatus.TimeSlice)
 		if currentStatus.lookupCount > 0 {
 			currentStatus.HitRate = float64(currentStatus.hitCount) / float64(currentStatus.lookupCount)
 		} else {
 			currentStatus.HitRate = 0.0
 		}
 		cache.lastStatus.TimeStamp = now
-		cache.lastStatus.TimeRange = 0
+		cache.lastStatus.TimeSlice = 0
 		cache.lastStatus.ExpiredCount = expiredCount
 		cache.lastStatus.ItemsCount = itemsCount
 		cache.lastStatus.hitCount = hitCount
