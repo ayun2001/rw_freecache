@@ -105,16 +105,23 @@ func (cache *Cache) DelInt(key int64) (affected bool) {
 	return cache.Del(bKey[:])
 }
 
-func (cache *Cache) EvacuateCount() (count int64) {
+func (cache *Cache) HistoricalEvacuateCount() (count int64) {
 	for i := 0; i < 256; i++ {
 		count += atomic.LoadInt64(&cache.segments[i].totalEvacuate)
 	}
 	return
 }
 
-func (cache *Cache) ExpiredCount() (count int64) {
+func (cache *Cache) HistoricalExpiredCount() (count int64) {
 	for i := 0; i < 256; i++ {
 		count += atomic.LoadInt64(&cache.segments[i].totalExpired)
+	}
+	return
+}
+
+func (cache *Cache) HistoricalOverwriteCount() (overwriteCount int64) {
+	for i := 0; i < 256; i++ {
+		overwriteCount += atomic.LoadInt64(&cache.segments[i].overwrites)
 	}
 	return
 }
@@ -122,6 +129,13 @@ func (cache *Cache) ExpiredCount() (count int64) {
 func (cache *Cache) EntryCount() (entryCount int64) {
 	for i := 0; i < 256; i++ {
 		entryCount += atomic.LoadInt64(&cache.segments[i].entryCount)
+	}
+	return
+}
+
+func (cache *Cache) ExpiredCount() (deleteCount int64) {
+	for i := 0; i < 256; i++ {
+		deleteCount += atomic.LoadInt64(&cache.segments[i].totalCount) - atomic.LoadInt64(&cache.segments[i].entryCount)
 	}
 	return
 }
@@ -141,13 +155,6 @@ func (cache *Cache) HitRate() float64 {
 	} else {
 		return float64(cache.HitCount()) / float64(lookupCount)
 	}
-}
-
-func (cache *Cache) OverwriteCount() (overwriteCount int64) {
-	for i := 0; i < 256; i++ {
-		overwriteCount += atomic.LoadInt64(&cache.segments[i].overwrites)
-	}
-	return
 }
 
 func (cache *Cache) Clear() {
