@@ -10,13 +10,12 @@ import (
 type CacheStatus struct {
 	TimeStamp,
 	TimeSlice,
-	ItemsCount,
-	ExpiredCount int64
-	hitCount    int64        `json:"-"`
-	lookupCount int64        `json:"-"`
-	HitRate,
+	ItemsCount int64
+	hitCount    int64 `json:"-"`
+	lookupCount int64 `json:"-"`
 	AvgLookupPerSecond,
-	AvgHitPerSecond float64
+	AvgHitPerSecond,
+	HitRate float64
 }
 
 func getCurrTimestamp() int64 {
@@ -105,23 +104,16 @@ func (cache *Cache) DelInt(key int64) (affected bool) {
 	return cache.Del(bKey[:])
 }
 
-func (cache *Cache) HistoricalEvacuateCount() (count int64) {
+func (cache *Cache) EvacuateCount() (count int64) {
 	for i := 0; i < 256; i++ {
 		count += atomic.LoadInt64(&cache.segments[i].totalEvacuate)
 	}
 	return
 }
 
-func (cache *Cache) HistoricalExpiredCount() (count int64) {
+func (cache *Cache) ExpiredCount() (count int64) {
 	for i := 0; i < 256; i++ {
 		count += atomic.LoadInt64(&cache.segments[i].totalExpired)
-	}
-	return
-}
-
-func (cache *Cache) HistoricalOverwriteCount() (overwriteCount int64) {
-	for i := 0; i < 256; i++ {
-		overwriteCount += atomic.LoadInt64(&cache.segments[i].overwrites)
 	}
 	return
 }
@@ -129,13 +121,6 @@ func (cache *Cache) HistoricalOverwriteCount() (overwriteCount int64) {
 func (cache *Cache) EntryCount() (entryCount int64) {
 	for i := 0; i < 256; i++ {
 		entryCount += atomic.LoadInt64(&cache.segments[i].entryCount)
-	}
-	return
-}
-
-func (cache *Cache) ExpiredCount() (deleteCount int64) {
-	for i := 0; i < 256; i++ {
-		deleteCount += atomic.LoadInt64(&cache.segments[i].totalCount) - atomic.LoadInt64(&cache.segments[i].entryCount)
 	}
 	return
 }
@@ -157,6 +142,13 @@ func (cache *Cache) HitRate() float64 {
 	}
 }
 
+func (cache *Cache) OverwriteCount() (overwriteCount int64) {
+	for i := 0; i < 256; i++ {
+		overwriteCount += atomic.LoadInt64(&cache.segments[i].overwrites)
+	}
+	return
+}
+
 func (cache *Cache) Clear() {
 	for i := 0; i < 256; i++ {
 		seg := cache.segments[i]
@@ -168,7 +160,6 @@ func (cache *Cache) Clear() {
 	atomic.StoreInt64(&cache.missCount, 0)
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
 	cache.lastStatus.TimeSlice = 0
-	cache.lastStatus.ExpiredCount = 0
 	cache.lastStatus.ItemsCount = 0
 	cache.lastStatus.hitCount = 0
 	cache.lastStatus.lookupCount = 0
@@ -185,21 +176,17 @@ func (cache *Cache) ResetStatistics() {
 	}
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
 	cache.lastStatus.TimeSlice = 0
-	cache.lastStatus.ExpiredCount = 0
 	cache.lastStatus.ItemsCount = 0
 	cache.lastStatus.hitCount = 0
 	cache.lastStatus.lookupCount = 0
 	cache.lastStatus.HitRate = 0
 }
-
 func (cache *Cache) GetStatistics() *CacheStatus {
 	now := getCurrTimestamp()
 	currentStatus := CacheStatus{TimeStamp: now, TimeSlice: now - cache.lastStatus.TimeStamp}
 	itemsCount := cache.EntryCount()
-	expiredCount := cache.ExpiredCount()
 	hitCount := cache.HitCount()
 	lookupCount := cache.LookupCount()
-	currentStatus.ExpiredCount = expiredCount
 	currentStatus.ItemsCount = itemsCount
 	if currentStatus.TimeSlice > 0 {
 		currentStatus.hitCount = hitCount - cache.lastStatus.hitCount
@@ -213,7 +200,6 @@ func (cache *Cache) GetStatistics() *CacheStatus {
 		}
 		cache.lastStatus.TimeStamp = now
 		cache.lastStatus.TimeSlice = 0
-		cache.lastStatus.ExpiredCount = expiredCount
 		cache.lastStatus.ItemsCount = itemsCount
 		cache.lastStatus.hitCount = hitCount
 		cache.lastStatus.lookupCount = lookupCount
