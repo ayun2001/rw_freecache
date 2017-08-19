@@ -15,9 +15,7 @@ func TestFreeCache(t *testing.T) {
 	if cache.HitRate() != 0 {
 		t.Error("initial hit rate should be zero")
 	}
-	//if cache.AverageAccessTime() != 0 {
-	//	t.Error("initial average access time should be zero")
-	//}
+
 	key := []byte("abcd")
 	val := []byte("efghijkl")
 	err := cache.Set(key, val, 0)
@@ -80,13 +78,6 @@ func TestFreeCache(t *testing.T) {
 			}
 		}
 	}
-
-	//t.Logf("hit rate is %v, evacuates %v, entries %v, average time %v, expire count %v\n",
-	//	cache.HitRate(), cache.EvacuateCount(), cache.EntryCount(), cache.AverageAccessTime(), cache.ExpiredCount())
-	//
-	//cache.ResetStatistics()
-	//t.Logf("hit rate is %v, evacuates %v, entries %v, average time %v, expire count %v\n",
-	//	cache.HitRate(), cache.EvacuateCount(), cache.EntryCount(), cache.AverageAccessTime(), cache.ExpiredCount())
 
 	t.Logf("hit rate is %v, evacuates %v, entries %v, expire count %v\n",
 		cache.HitRate(), cache.EvacuateCount(), cache.EntryCount(), cache.ExpiredCount())
@@ -176,64 +167,6 @@ func TestTTL(t *testing.T) {
 		t.Fatalf("ttl should be 1, but %d return", ttl)
 	}
 }
-
-//func TestAverageAccessTimeWhenUpdateInplace(t *testing.T) {
-//	cache := NewCache(1024)
-//
-//	key := []byte("test-key")
-//	valueLong := []byte("very-long-de-value")
-//	valueShort := []byte("short")
-//
-//	err := cache.Set(key, valueLong, 0)
-//	if err != nil {
-//		t.Fatal("err should be nil")
-//	}
-//	now := time.Now().Unix()
-//	aat := cache.AverageAccessTime()
-//	if (now - aat) > 1 {
-//		t.Fatalf("track average access time error, now:%d, aat:%d", now, aat)
-//	}
-//
-//	time.Sleep(time.Second * 4)
-//	err = cache.Set(key, valueShort, 0)
-//	if err != nil {
-//		t.Fatal("err should be nil")
-//	}
-//	now = time.Now().Unix()
-//	aat = cache.AverageAccessTime()
-//	if (now - aat) > 1 {
-//		t.Fatalf("track average access time error, now:%d, aat:%d", now, aat)
-//	}
-//}
-
-//func TestAverageAccessTimeWhenUpdateWithNewSpace(t *testing.T) {
-//	cache := NewCache(1024)
-//
-//	key := []byte("test-key")
-//	valueLong := []byte("very-long-de-value")
-//	valueShort := []byte("short")
-//
-//	err := cache.Set(key, valueShort, 0)
-//	if err != nil {
-//		t.Fatal("err should be nil")
-//	}
-//	now := time.Now().Unix()
-//	aat := cache.AverageAccessTime()
-//	if (now - aat) > 1 {
-//		t.Fatalf("track average access time error, now:%d, aat:%d", now, aat)
-//	}
-//
-//	time.Sleep(time.Second * 4)
-//	err = cache.Set(key, valueLong, 0)
-//	if err != nil {
-//		t.Fatal("err should be nil")
-//	}
-//	now = time.Now().Unix()
-//	aat = cache.AverageAccessTime()
-//	if (now - aat) > 2 {
-//		t.Fatalf("track average access time error, now:%d, aat:%d", now, aat)
-//	}
-//}
 
 func TestLargeEntry(t *testing.T) {
 	cacheSize := 512 * 1024
@@ -340,36 +273,12 @@ func TestIterator(t *testing.T) {
 	}
 }
 
-func BenchmarkCacheSet(b *testing.B) {
-	cache := NewCache(256 * 1024 * 1024)
-	var key [8]byte
-	for i := 0; i < b.N; i++ {
-		binary.LittleEndian.PutUint64(key[:], uint64(i))
-		cache.Set(key[:], make([]byte, 8), 0)
-	}
-}
-
 func BenchmarkMapSet(b *testing.B) {
 	m := make(map[string][]byte)
 	var key [8]byte
 	for i := 0; i < b.N; i++ {
 		binary.LittleEndian.PutUint64(key[:], uint64(i))
 		m[string(key[:])] = make([]byte, 8)
-	}
-}
-
-func BenchmarkCacheGet(b *testing.B) {
-	b.StopTimer()
-	cache := NewCache(256 * 1024 * 1024)
-	var key [8]byte
-	for i := 0; i < b.N; i++ {
-		binary.LittleEndian.PutUint64(key[:], uint64(i))
-		cache.Set(key[:], make([]byte, 8), 0)
-	}
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		binary.LittleEndian.PutUint64(key[:], uint64(i))
-		cache.Get(key[:])
 	}
 }
 
@@ -389,6 +298,46 @@ func BenchmarkMapGet(b *testing.B) {
 			hitCount++
 		}
 	}
+}
+
+func BenchmarkCacheSet(b *testing.B) {
+	cache := NewCache(256 * 1024 * 1024)
+	var key [8]byte
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.Set(key[:], make([]byte, 8), 0)
+	}
+}
+
+func BenchmarkCacheGet(b *testing.B) {
+	b.StopTimer()
+	cache := NewCache(256 * 1024 * 1024)
+	var key [8]byte
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.Set(key[:], make([]byte, 8), 0)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.Get(key[:])
+	}
+}
+
+func BenchmarkCacheParallelGet(b *testing.B) {
+	b.StopTimer()
+	cache := NewCache(256 * 1024 * 1024)
+	i := 3545123
+	var key [8]byte
+	binary.LittleEndian.PutUint64(key[:], uint64(i))
+	cache.Set(key[:], make([]byte, 8), 0)
+	b.StartTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			binary.LittleEndian.PutUint64(key[:], uint64(i))
+			cache.Get(key[:])
+		}
+	})
 }
 
 func BenchmarkHashFunc(b *testing.B) {

@@ -9,6 +9,14 @@ freecache 因为其高效的性能获得很多人的喜爱，我也不例外。�
 1. 将Mutex 修改成 RWMutex  --> 并发性能极大的提高
 2. 去掉了访问时间计数器
 
+# 性能测试 （performance）：
+BenchmarkMapSet-4             	 2000000	       798 ns/op
+BenchmarkMapGet-4             	10000000	       170 ns/op
+BenchmarkCacheSet-4           	 5000000	       466 ns/op
+BenchmarkCacheGet-4           	 5000000	       426 ns/op
+BenchmarkCacheParallelGet-4   	20000000	        84.6 ns/op
+BenchmarkHashFunc-4           	50000000	        25.2 ns/op
+
 # 使用例子： （和原 freecache 没有区别）
 
 ```go

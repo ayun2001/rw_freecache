@@ -64,6 +64,9 @@ func (cache *Cache) Get(key []byte) (value []byte, err error) {
 	hashVal := hashFunc(key)
 	segId := hashVal & 255
 	value, err = cache.segments[segId].get(key, hashVal)
+	if cache.hitCount >= MAX_INT64_NUM || cache.missCount >= MAX_INT64_NUM {
+		cache.ResetStatistics() //reset all status count, two
+	}
 	if err == nil {
 		atomic.AddInt64(&cache.hitCount, 1)
 	} else {

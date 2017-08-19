@@ -7,8 +7,11 @@ import (
 	"sync"
 )
 
-const HASH_ENTRY_SIZE = 16
-const ENTRY_HDR_SIZE = 24
+const (
+	HASH_ENTRY_SIZE = 16
+	ENTRY_HDR_SIZE  = 24
+	MAX_INT64_NUM   = 9223372036854775800
+)
 
 var ErrLargeKey = errors.New("The key is larger than 65535")
 var ErrLargeEntry = errors.New("The entry size is larger than 1/1024 of cache size")
@@ -101,7 +104,11 @@ func (seg *segment) set(key, value []byte, hashVal uint64, expireSeconds int) (e
 			//in place overwrite
 			seg.rb.WriteAt(hdrBuf[:], matchedPtr.offset)
 			seg.rb.WriteAt(value, matchedPtr.offset+ENTRY_HDR_SIZE+int64(hdr.keyLen))
-			seg.overwrites++
+			if seg.totalExpired < MAX_INT64_NUM {
+				seg.overwrites++
+			} else {
+				seg.overwrites = 0
+			}
 			seg.lock.Unlock()
 			return
 		}
@@ -173,14 +180,22 @@ func (seg *segment) evacuate(entryLen int64, slotId uint8, now uint32) (slotModi
 			seg.totalCount--
 			seg.vacuumLen += oldEntryLen
 			if expired {
-				seg.totalExpired++
+				if seg.totalExpired < MAX_INT64_NUM {
+					seg.totalExpired++
+				} else {
+					seg.totalExpired = 0
+				}
 			}
 		} else {
 			// evacuate an old entry that has been accessed recently for better cache hit rate.
 			newOff := seg.rb.Evacuate(oldOff, int(oldEntryLen))
 			seg.updateEntryPtr(oldHdr.slotId, oldHdr.hash16, oldOff, newOff)
 			consecutiveEvacuate++
-			seg.totalEvacuate++
+			if seg.totalExpired < MAX_INT64_NUM {
+				seg.totalEvacuate++
+			} else {
+				seg.totalEvacuate = 0
+			}
 		}
 	}
 	return
@@ -210,9 +225,12 @@ func (seg *segment) get(key []byte, hashVal uint64) (value []byte, err error) {
 		seg.lock.RUnlock()
 		seg.lock.Lock()
 		seg.delEntryPtr(slotId, hash16, ptr.offset)
-		seg.totalExpired++
+		if seg.totalExpired < MAX_INT64_NUM {
+			seg.totalExpired++
+		} else {
+			seg.totalExpired = 0
+		}
 		seg.lock.Unlock()
-
 		err = ErrNotFound
 		return
 	}
