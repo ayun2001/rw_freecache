@@ -5,21 +5,30 @@ import (
 	"sync/atomic"
 	"github.com/cespare/xxhash"
 	"time"
+	"math"
 )
 
 type CacheStatus struct {
-	TimeStamp,
-	TimeSlice,
-	ItemsCount int64
-	hitCount    int64 `json:"-"`
-	lookupCount int64 `json:"-"`
-	AvgLookupPerSecond,
-	AvgHitPerSecond,
-	HitRate float64
+	TimeStamp          int64 `json:"time_stamp"`
+	TimeSlice          int64 `json:"time_slice"`
+	ItemsCount         int64 `json:"items_count"`
+	hitCount           int64 `json:"-"`
+	lookupCount        int64 `json:"-"`
+	HitRate            float64 `json:"hit_rate"`
+	AvgAccessTime      float64 `json:"avg_access_time"`
+	AvgLookupPerSecond float64 `json:"avg_lookup_per_second"`
+	AvgHitPerSecond    float64 `json:"avg_hit_per_second"`
 }
 
-func getCurrTimestamp() int64 {
+func getCurrentTimestamp() int64 {
 	return int64(time.Now().Unix())
+}
+
+//fix float64 length
+func Float64ToFixed(f float64, places int) float64 {
+	shift := math.Pow(10, float64(places))
+	fv := 0.0000000001 + f //对浮点数产生.xxx999999999 计算不准进行处理
+	return math.Floor(fv * shift + .5) / shift
 }
 
 type Cache struct {
@@ -38,14 +47,14 @@ func hashFunc(data []byte) uint64 {
 // `debug.SetGCPercent()`, set it to a much smaller value
 // to limit the memory consumption and GC pause time.
 func NewCache(size int) (cache *Cache) {
-	if size < 512*1024 {
+	if size < 512 * 1024 {
 		size = 512 * 1024
 	}
 	cache = new(Cache)
 	for i := 0; i < 256; i++ {
-		cache.segments[i] = newSegment(size/256, i)
+		cache.segments[i] = newSegment(size / 256, i)
 	}
-	cache.lastStatus = CacheStatus{TimeStamp: getCurrTimestamp()}
+	cache.lastStatus = CacheStatus{TimeStamp: getCurrentTimestamp()}
 	return
 }
 
@@ -161,7 +170,7 @@ func (cache *Cache) Clear() {
 	}
 	atomic.StoreInt64(&cache.hitCount, 0)
 	atomic.StoreInt64(&cache.missCount, 0)
-	cache.lastStatus.TimeStamp = getCurrTimestamp()
+	cache.lastStatus.TimeStamp = getCurrentTimestamp()
 	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ItemsCount = 0
 	cache.lastStatus.hitCount = 0
@@ -177,15 +186,16 @@ func (cache *Cache) ResetStatistics() {
 		cache.segments[i].resetStatistics()
 		cache.segments[i].lock.Unlock()
 	}
-	cache.lastStatus.TimeStamp = getCurrTimestamp()
+	cache.lastStatus.TimeStamp = getCurrentTimestamp()
 	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ItemsCount = 0
 	cache.lastStatus.hitCount = 0
 	cache.lastStatus.lookupCount = 0
 	cache.lastStatus.HitRate = 0
 }
+
 func (cache *Cache) GetStatistics() *CacheStatus {
-	now := getCurrTimestamp()
+	now := getCurrentTimestamp()
 	currentStatus := CacheStatus{TimeStamp: now, TimeSlice: now - cache.lastStatus.TimeStamp}
 	itemsCount := cache.EntryCount()
 	hitCount := cache.HitCount()
@@ -194,12 +204,14 @@ func (cache *Cache) GetStatistics() *CacheStatus {
 	if currentStatus.TimeSlice > 0 {
 		currentStatus.hitCount = hitCount - cache.lastStatus.hitCount
 		currentStatus.lookupCount = lookupCount - cache.lastStatus.lookupCount
-		currentStatus.AvgLookupPerSecond = float64(currentStatus.lookupCount) / float64(currentStatus.TimeSlice)
-		currentStatus.AvgHitPerSecond = float64(currentStatus.hitCount) / float64(currentStatus.TimeSlice)
+		currentStatus.AvgLookupPerSecond = Float64ToFixed(float64(currentStatus.lookupCount) / float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgHitPerSecond = Float64ToFixed(float64(currentStatus.hitCount) / float64(currentStatus.TimeSlice), 3)
 		if currentStatus.lookupCount > 0 {
-			currentStatus.HitRate = float64(currentStatus.hitCount) / float64(currentStatus.lookupCount)
+			currentStatus.HitRate = Float64ToFixed(float64(currentStatus.hitCount) / float64(currentStatus.lookupCount), 3)
+			currentStatus.AvgAccessTime = Float64ToFixed((float64(currentStatus.TimeSlice) / float64(currentStatus.lookupCount)) * 1000, 3)  //Microsecond
 		} else {
-			currentStatus.HitRate = 0.0
+			currentStatus.HitRate = 0
+			currentStatus.AvgAccessTime = 0
 		}
 		cache.lastStatus.TimeStamp = now
 		cache.lastStatus.TimeSlice = 0
