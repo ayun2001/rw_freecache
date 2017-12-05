@@ -107,7 +107,7 @@ func (seg *segment) set(key, value []byte, hashVal uint64, expireSeconds int) (e
 			if seg.totalExpired < MAX_INT64_NUM {
 				seg.overwrites++
 			} else {
-				seg.overwrites = 0
+				seg.overwrites = 1
 			}
 			seg.lock.Unlock()
 			return
@@ -183,7 +183,7 @@ func (seg *segment) evacuate(entryLen int64, slotId uint8, now uint32) (slotModi
 				if seg.totalExpired < MAX_INT64_NUM {
 					seg.totalExpired++
 				} else {
-					seg.totalExpired = 0
+					seg.totalExpired = 1
 				}
 			}
 		} else {
@@ -194,7 +194,7 @@ func (seg *segment) evacuate(entryLen int64, slotId uint8, now uint32) (slotModi
 			if seg.totalExpired < MAX_INT64_NUM {
 				seg.totalEvacuate++
 			} else {
-				seg.totalEvacuate = 0
+				seg.totalEvacuate = 1
 			}
 		}
 	}
@@ -228,7 +228,7 @@ func (seg *segment) get(key []byte, hashVal uint64) (value []byte, err error) {
 		if seg.totalExpired < MAX_INT64_NUM {
 			seg.totalExpired++
 		} else {
-			seg.totalExpired = 0
+			seg.totalExpired = 1
 		}
 		seg.lock.Unlock()
 		err = ErrNotFound
