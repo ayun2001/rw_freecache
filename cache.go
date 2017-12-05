@@ -150,7 +150,7 @@ func (cache *Cache) HitRate() float64 {
 	if lookupCount == 0 {
 		return 0
 	} else {
-		return float64(cache.HitCount()) / float64(lookupCount)
+		return Float64ToFixed(float64(cache.HitCount()) / float64(lookupCount), 3)
 	}
 }
 
