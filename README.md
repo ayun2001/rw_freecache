@@ -7,7 +7,7 @@ freecache 因为其高效的性能获得很多人的喜爱，我也不例外。�
 
 # 特性 （相比原 freecache）：
 1. 将Mutex 修改成 RWMutex  --> 并发性能极大的提高
-2. 去掉了访问时间计数器
+2. 去掉了segment访问时间计数器，重新添加平局访问计数器。（在 GetStatistics 方法的返回值中）
 
 # 性能测试 （performance）：
     BenchmarkMapSet-4             	 2000000	       650 ns/op
