@@ -1,13 +1,13 @@
 package freecache
 
 import (
+	"time"
 	"math"
 	"unsafe"
 	"reflect"
 	"encoding/binary"
 	"sync/atomic"
 	"github.com/cespare/xxhash"
-	"time"
 )
 
 const (
@@ -241,9 +241,11 @@ func (cache *Cache) Clear() {
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
 	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ItemsCount = 0
+	cache.lastStatus.HitRate = 0
 	cache.lastStatus.hit_count = 0
 	cache.lastStatus.lookup_count = 0
-	cache.lastStatus.HitRate = 0
+	cache.lastStatus.evacuate_count = 0
+	cache.lastStatus.expired_count = 0
 }
 
 func (cache *Cache) ResetStatistics() {
@@ -253,9 +255,11 @@ func (cache *Cache) ResetStatistics() {
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
 	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ItemsCount = 0
+	cache.lastStatus.HitRate = 0
 	cache.lastStatus.hit_count = 0
 	cache.lastStatus.lookup_count = 0
-	cache.lastStatus.HitRate = 0
+	cache.lastStatus.evacuate_count = 0
+	cache.lastStatus.expired_count = 0
 }
 
 func (cache *Cache) GetSummaryStatus() CacheSummaryStatus {
