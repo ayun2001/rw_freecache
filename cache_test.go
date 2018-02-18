@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	mrand "math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -15,7 +17,6 @@ func TestFreeCache(t *testing.T) {
 	if cache.HitRate() != 0 {
 		t.Error("initial hit rate should be zero")
 	}
-
 	key := []byte("abcd")
 	val := []byte("efghijkl")
 	err := cache.Set(key, val, 0)
@@ -79,13 +80,12 @@ func TestFreeCache(t *testing.T) {
 		}
 	}
 
-	t.Logf("hit rate is %v, evacuates %v, entries %v, expire count %v\n",
+	t.Logf("hit rate is %v, evacuates %v, entries %v,  expire count %v\n",
 		cache.HitRate(), cache.EvacuateCount(), cache.EntryCount(), cache.ExpiredCount())
 
 	cache.ResetStatistics()
 	t.Logf("hit rate is %v, evacuates %v, entries %v, expire count %v\n",
 		cache.HitRate(), cache.EvacuateCount(), cache.EntryCount(), cache.ExpiredCount())
-
 }
 
 func TestOverwrite(t *testing.T) {
@@ -128,6 +128,41 @@ func TestOverwrite(t *testing.T) {
 		t.Error("overwrite count is", count, "expected ", 3)
 	}
 
+}
+
+func TestGetWithExpiration(t *testing.T) {
+	cache := NewCache(1024)
+	key := []byte("abcd")
+	val := []byte("efgh")
+	err := cache.Set(key, val, 2)
+	if err != nil {
+		t.Error("err should be nil", err.Error())
+	}
+
+	res, expiry, err := cache.GetWithExpiration(key)
+	var expireTime time.Time
+	var startTime = time.Now()
+	for {
+		_, _, err := cache.GetWithExpiration(key)
+		expireTime = time.Now()
+		if err != nil {
+			break
+		}
+		if time.Now().Unix() > int64(expiry+1) {
+			break
+		}
+		time.Sleep(1 * time.Millisecond)
+	}
+	if time.Second > expireTime.Sub(startTime) || 3*time.Second < expireTime.Sub(startTime) {
+		t.Error("Cache should expire within a second of the expire time")
+	}
+
+	if err != nil {
+		t.Error("err should be nil", err.Error())
+	}
+	if !bytes.Equal(val, res) {
+		t.Fatalf("%s should be the same as %s but isn't", res, val)
+	}
 }
 
 func TestExpire(t *testing.T) {
@@ -220,11 +255,11 @@ func TestLargeEntry(t *testing.T) {
 
 func TestInt64Key(t *testing.T) {
 	cache := NewCache(1024)
-	err := cache.SetInt(1, []byte("abc"), 0)
+	err := cache.SetInt(1, []byte("abc"), 3)
 	if err != nil {
 		t.Error("err should be nil")
 	}
-	err = cache.SetInt(2, []byte("cde"), 0)
+	err = cache.SetInt(2, []byte("cde"), 3)
 	if err != nil {
 		t.Error("err should be nil")
 	}
@@ -235,6 +270,19 @@ func TestInt64Key(t *testing.T) {
 	if !bytes.Equal(val, []byte("abc")) {
 		t.Error("value not equal")
 	}
+	time.Sleep(2 * time.Second)
+	val, expiry, err := cache.GetIntWithExpiration(1)
+	if err != nil {
+		t.Error("err should be nil")
+	}
+	if !bytes.Equal(val, []byte("abc")) {
+		t.Error("value not equal")
+	}
+	now := time.Now()
+	if expiry != uint32(now.Unix()+1) {
+		t.Errorf("Expiry should one second in the future but was %v", now)
+	}
+
 	affected := cache.DelInt(1)
 	if !affected {
 		t.Error("del should return affected true")
@@ -273,6 +321,115 @@ func TestIterator(t *testing.T) {
 	}
 }
 
+func TestSetLargerEntryDeletesWrongEntry(t *testing.T) {
+	cachesize := 512 * 1024
+	cache := NewCache(cachesize)
+
+	value1 := "aaa"
+	key1 := []byte("key1")
+	value := value1
+	cache.Set(key1, []byte(value), 0)
+
+	it := cache.NewIterator()
+	entry := it.Next()
+	if !bytes.Equal(entry.Key, key1) {
+		t.Fatalf("key %s not equal to %s", entry.Key, key1)
+	}
+	if !bytes.Equal(entry.Value, []byte(value)) {
+		t.Fatalf("value %s not equal to %s", entry.Value, value)
+	}
+	entry = it.Next()
+	if entry != nil {
+		t.Fatalf("expected nil entry but got %s %s", entry.Key, entry.Value)
+	}
+
+	value = value1 + "XXXXXX"
+	cache.Set(key1, []byte(value), 0)
+
+	value = value1 + "XXXXYYYYYYY"
+	cache.Set(key1, []byte(value), 0)
+	it = cache.NewIterator()
+	entry = it.Next()
+	if !bytes.Equal(entry.Key, key1) {
+		t.Fatalf("key %s not equal to %s", entry.Key, key1)
+	}
+	if !bytes.Equal(entry.Value, []byte(value)) {
+		t.Fatalf("value %s not equal to %s", entry.Value, value)
+	}
+	entry = it.Next()
+	if entry != nil {
+		t.Fatalf("expected nil entry but got %s %s", entry.Key, entry.Value)
+	}
+}
+
+func TestRace(t *testing.T) {
+	cache := NewCache(minBufSize)
+	inUse := 8
+	wg := sync.WaitGroup{}
+	var iters int64 = 1000
+
+	wg.Add(6)
+	addFunc := func() {
+		var i int64
+		for i = 0; i < iters; i++ {
+			err := cache.SetInt(int64(mrand.Intn(inUse)), []byte("abc"), 1)
+			if err != nil {
+				t.Errorf("err: %s", err)
+			}
+		}
+		wg.Done()
+	}
+	getFunc := func() {
+		var i int64
+		for i = 0; i < iters; i++ {
+			_, _ = cache.GetInt(int64(mrand.Intn(inUse))) //it will likely error w/ delFunc running too
+		}
+		wg.Done()
+	}
+	delFunc := func() {
+		var i int64
+		for i = 0; i < iters; i++ {
+			cache.DelInt(int64(mrand.Intn(inUse)))
+		}
+		wg.Done()
+	}
+	evacFunc := func() {
+		var i int64
+		for i = 0; i < iters; i++ {
+			_ = cache.EvacuateCount()
+			_ = cache.ExpiredCount()
+			_ = cache.EntryCount()
+			_ = cache.HitCount()
+			_ = cache.LookupCount()
+			_ = cache.HitRate()
+			_ = cache.OverwriteCount()
+		}
+		wg.Done()
+	}
+	resetFunc := func() {
+		var i int64
+		for i = 0; i < iters; i++ {
+			cache.ResetStatistics()
+		}
+		wg.Done()
+	}
+	clearFunc := func() {
+		var i int64
+		for i = 0; i < iters; i++ {
+			cache.Clear()
+		}
+		wg.Done()
+	}
+
+	go addFunc()
+	go getFunc()
+	go delFunc()
+	go evacFunc()
+	go resetFunc()
+	go clearFunc()
+	wg.Wait()
+}
+
 func BenchmarkMapSet(b *testing.B) {
 	m := make(map[string][]byte)
 	var key [8]byte
@@ -280,6 +437,28 @@ func BenchmarkMapSet(b *testing.B) {
 		binary.LittleEndian.PutUint64(key[:], uint64(i))
 		m[string(key[:])] = make([]byte, 8)
 	}
+}
+
+func BenchmarkCacheSet(b *testing.B) {
+	cache := NewCache(256 * 1024 * 1024)
+	var key [8]byte
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.Set(key[:], make([]byte, 8), 0)
+	}
+}
+
+func BenchmarkCacheSetParallel(b *testing.B) {
+	cache := NewCache(256 * 1024 * 1024)
+	var key [8]byte
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			binary.LittleEndian.PutUint64(key[:], uint64(i))
+			cache.Set(key[:], make([]byte, 8), 0)
+			i++
+		}
+	})
 }
 
 func BenchmarkMapGet(b *testing.B) {
@@ -300,15 +479,6 @@ func BenchmarkMapGet(b *testing.B) {
 	}
 }
 
-func BenchmarkCacheSet(b *testing.B) {
-	cache := NewCache(256 * 1024 * 1024)
-	var key [8]byte
-	for i := 0; i < b.N; i++ {
-		binary.LittleEndian.PutUint64(key[:], uint64(i))
-		cache.Set(key[:], make([]byte, 8), 0)
-	}
-}
-
 func BenchmarkCacheGet(b *testing.B) {
 	b.StopTimer()
 	cache := NewCache(256 * 1024 * 1024)
@@ -324,18 +494,55 @@ func BenchmarkCacheGet(b *testing.B) {
 	}
 }
 
-func BenchmarkCacheParallelGet(b *testing.B) {
+func BenchmarkCacheGetParallel(b *testing.B) {
 	b.StopTimer()
 	cache := NewCache(256 * 1024 * 1024)
-	i := 3545123
 	var key [8]byte
-	binary.LittleEndian.PutUint64(key[:], uint64(i))
-	cache.Set(key[:], make([]byte, 8), 0)
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.Set(key[:], make([]byte, 8), 0)
+	}
 	b.StartTimer()
 	b.RunParallel(func(pb *testing.PB) {
+		i := 0
 		for pb.Next() {
 			binary.LittleEndian.PutUint64(key[:], uint64(i))
 			cache.Get(key[:])
+			i++
+		}
+	})
+}
+
+func BenchmarkCacheGetWithExpiration(b *testing.B) {
+	b.StopTimer()
+	cache := NewCache(256 * 1024 * 1024)
+	var key [8]byte
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.Set(key[:], make([]byte, 8), 0)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.GetWithExpiration(key[:])
+	}
+}
+
+func BenchmarkCacheGetWithExpirationParallel(b *testing.B) {
+	b.StopTimer()
+	cache := NewCache(256 * 1024 * 1024)
+	var key [8]byte
+	for i := 0; i < b.N; i++ {
+		binary.LittleEndian.PutUint64(key[:], uint64(i))
+		cache.Set(key[:], make([]byte, 8), 0)
+	}
+	b.StartTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			binary.LittleEndian.PutUint64(key[:], uint64(i))
+			cache.GetWithExpiration(key[:])
+			i++
 		}
 	})
 }

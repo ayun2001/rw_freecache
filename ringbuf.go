@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-var ErrOutOfRange = errors.New("out of range")
+var ErrOutOfRange = errors.New("Out of range")
 
 // Ring buffer has a fixed size, when data exceeds the
 // size, old data will be overwritten by new data.
@@ -36,6 +36,10 @@ func (rb *RingBuf) Dump() []byte {
 
 func (rb *RingBuf) String() string {
 	return fmt.Sprintf("[size:%v, start:%v, end:%v, index:%v]", len(rb.data), rb.begin, rb.end, rb.index)
+}
+
+func (rb *RingBuf) ToJSON() string {
+	return fmt.Sprintf("{\"size\":%v, \"start\":%v, \"end\":%v, \"index\":%v}", len(rb.data), rb.begin, rb.end, rb.index)
 }
 
 func (rb *RingBuf) Size() int64 {
