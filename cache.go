@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	minBufSize          = 512 * 1024
+	minBufSize = 512 * 1024
 	maxSegmentItemCount = int64(9223372036854775800 / 256)
 )
 
@@ -35,7 +35,7 @@ type CacheSummaryStatus struct {
 func float64ToFixed(f float64, places int) float64 {
 	shift := math.Pow(10, float64(places))
 	fv := 0.0000000001 + f //对浮点数产生.xxx999999999 计算不准进行处理
-	return math.Floor(fv*shift+.5) / shift
+	return math.Floor(fv * shift + .5) / shift
 }
 
 func stringToBytes(s string) []byte {
@@ -65,7 +65,7 @@ func NewCache(size int) (cache *Cache) {
 	}
 	cache = new(Cache)
 	for i := 0; i < 256; i++ {
-		cache.segments[i] = newSegment(size/256, i)
+		cache.segments[i] = newSegment(size / 256, i)
 	}
 	cache.lastStatus = CacheSummaryStatus{TimeStamp: getCurrTimestamp()}
 	return
@@ -79,9 +79,7 @@ func NewCache(size int) (cache *Cache) {
 func (cache *Cache) Set(key, value []byte, expireSeconds int) (err error) {
 	hashVal := hashFunc(key)
 	segId := hashVal & 255
-	if cache.segments[segId].totalCount >= maxSegmentItemCount ||
-		cache.segments[segId].totalCount >= maxSegmentItemCount ||
-		cache.segments[segId].totalEvacuate >= maxSegmentItemCount {
+	if cache.segments[segId].totalCount >= maxSegmentItemCount || cache.segments[segId].totalEvacuate >= maxSegmentItemCount {
 		cache.segments[segId].clear()
 	}
 	err = cache.segments[segId].set(key, value, hashVal, expireSeconds)
@@ -223,7 +221,7 @@ func (cache *Cache) HitRate() float64 {
 	if lookupCount == 0 {
 		return 0
 	} else {
-		return float64ToFixed(float64(hitCount)/float64(lookupCount), 3)
+		return float64ToFixed(float64(hitCount) / float64(lookupCount), 3)
 	}
 }
 
@@ -276,13 +274,13 @@ func (cache *Cache) GetSummaryStatus() CacheSummaryStatus {
 		currentStatus.lookup_count = lookup_count - cache.lastStatus.lookup_count
 		currentStatus.evacuate_count = evacuate_count - cache.lastStatus.evacuate_count
 		currentStatus.expired_count = expired_count - cache.lastStatus.expired_count
-		currentStatus.AvgLookupPerSecond = float64ToFixed(float64(currentStatus.lookup_count)/float64(currentStatus.TimeSlice), 3)
-		currentStatus.AvgHitPerSecond = float64ToFixed(float64(currentStatus.hit_count)/float64(currentStatus.TimeSlice), 3)
-		currentStatus.AvgExpiredPerSecond = float64ToFixed(float64(currentStatus.expired_count)/float64(currentStatus.TimeSlice), 3)
-		currentStatus.AvgEvacuatePerSecond = float64ToFixed(float64(currentStatus.evacuate_count)/float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgLookupPerSecond = float64ToFixed(float64(currentStatus.lookup_count) / float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgHitPerSecond = float64ToFixed(float64(currentStatus.hit_count) / float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgExpiredPerSecond = float64ToFixed(float64(currentStatus.expired_count) / float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgEvacuatePerSecond = float64ToFixed(float64(currentStatus.evacuate_count) / float64(currentStatus.TimeSlice), 3)
 		if currentStatus.lookup_count > 0 {
-			currentStatus.HitRate = float64ToFixed(float64(currentStatus.hit_count)/float64(currentStatus.lookup_count), 3)
-			currentStatus.AvgAccessTime = float64ToFixed((float64(currentStatus.TimeSlice)/float64(currentStatus.lookup_count))*1000, 3) //Microsecond
+			currentStatus.HitRate = float64ToFixed(float64(currentStatus.hit_count) / float64(currentStatus.lookup_count), 3)
+			currentStatus.AvgAccessTime = float64ToFixed((float64(currentStatus.TimeSlice) / float64(currentStatus.lookup_count)) * 1000, 3) //Microsecond
 		} else {
 			currentStatus.HitRate = 0
 			currentStatus.AvgAccessTime = 0

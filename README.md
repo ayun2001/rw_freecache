@@ -1,4 +1,4 @@
-# FreeCache2
+# rw_freecache
 
 感谢 freecache 原作者对代码的无私贡献和其他开发者对代码的改善付出的卓越的努力。 
 
@@ -7,15 +7,18 @@ freecache 因为其高效的性能获得很多人的喜爱，我也不例外。�
 
 # 特性 （相比原 freecache）：
 1. 将Mutex 修改成 RWMutex  --> 并发性能极大的提高
-2. 去掉了segment访问时间计数器，重新添加平局访问计数器。（在 GetStatistics 方法的返回值中）
+2. 去掉了segment访问时间计数器，重新添加平局访问计数器。（在 GetSummaryStatus 方法的返回值中）
 
-# 性能测试 （performance）：
-    BenchmarkMapSet-4             	 2000000	       650 ns/op
-	BenchmarkMapGet-4             	20000000	       160 ns/op
-	BenchmarkCacheSet-4           	 3000000	       355 ns/op
-	BenchmarkCacheGet-4           	 5000000	       368 ns/op
-	BenchmarkCacheParallelGet-4   	30000000	        55.6 ns/op
-	BenchmarkHashFunc-4           	200000000	         8.16 ns/op
+# 性能测试 （performance）CPU:i7 6650U ：
+    BenchmarkMapSet-4                           	 2000000	       916 ns/op
+    BenchmarkCacheSet-4                         	 3000000	       516 ns/op
+    BenchmarkCacheSetParallel-4                 	 5000000	       344 ns/op
+    BenchmarkMapGet-4                           	10000000	       249 ns/op
+    BenchmarkCacheGet-4                         	 5000000	       499 ns/op
+    BenchmarkCacheGetParallel-4                 	20000000	       140 ns/op
+    BenchmarkCacheGetWithExpiration-4           	 5000000	       518 ns/op
+    BenchmarkCacheGetWithExpirationParallel-4   	20000000	       194 ns/op
+    BenchmarkHashFunc-4                         	200000000	       7.77 ns/op
 
 # 使用例子： （和原 freecache 没有区别）
 

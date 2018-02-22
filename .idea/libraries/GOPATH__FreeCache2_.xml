@@ -1,12 +1,12 @@
 <component name="libraryTable">
   <library name="GOPATH &lt;FreeCache2&gt;">
     <CLASSES>
-      <root url="file://$PROJECT_DIR$/../../Progames/GoPkg/src/shengyanli" />
-      <root url="file://$PROJECT_DIR$/../../Progames/GoPkg/src/github.com" />
+      <root url="file://$PROJECT_DIR$/../../programz/gopkgs/src/github.com" />
+      <root url="file://$PROJECT_DIR$/../../programz/gopkgs/src/shengyanli" />
     </CLASSES>
     <SOURCES>
-      <root url="file://$PROJECT_DIR$/../../Progames/GoPkg/src/shengyanli" />
-      <root url="file://$PROJECT_DIR$/../../Progames/GoPkg/src/github.com" />
+      <root url="file://$PROJECT_DIR$/../../programz/gopkgs/src/github.com" />
+      <root url="file://$PROJECT_DIR$/../../programz/gopkgs/src/shengyanli" />
     </SOURCES>
     <excluded>
       <root url="file://$PROJECT_DIR$" />
