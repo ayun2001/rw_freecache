@@ -20,15 +20,15 @@ type CacheSummaryStatus struct {
 	lookup_count         int64 `json:"-"`
 	expired_count        int64 `json:"-"`
 	evacuate_count       int64 `json:"-"`
-	TimeStamp            int64 `json:"time_stamp"`
-	TimeSlice            int64 `json:"time_slice"`
-	ItemsCount           int64 `json:"items_count"`
-	HitRate              float64 `json:"hit_rate"`
-	AvgAccessTime        float64 `json:"avg_access_time"`
-	AvgLookupPerSecond   float64 `json:"avg_lookup_per_second"`
-	AvgHitPerSecond      float64 `json:"avg_hit_per_second"`
-	AvgExpiredPerSecond  float64 `json:"avg_expired_per_second"`
-	AvgEvacuatePerSecond float64 `json:"avg_evacuate_per_second"`
+	TimeStamp            int64 `json:"time_stamp"`				//时间片
+	TimeSlice            int64 `json:"time_slice"`				//时间段 (两次读取之间的时间间隔)
+	ItemsCount           int64 `json:"items_count"`				//缓存中对象数量
+	HitRate              float64 `json:"hit_rate"`				//缓存命中率
+	AvgAccessTime        float64 `json:"avg_access_time"`			//缓存对象平均访问时间
+	AvgLookupPerSecond   float64 `json:"avg_lookup_per_second"`		//缓存每秒查询多少次
+	AvgHitPerSecond      float64 `json:"avg_hit_per_second"`		//缓存每秒击中对象多少次
+	AvgExpiredPerSecond  float64 `json:"avg_expired_per_second"`		//缓存每秒超时多少个对象
+	AvgEvacuatePerSecond float64 `json:"avg_evacuate_per_second"`		//缓存每秒因为空间不够导致清理的次数 (如果太大表示创建缓存的空间不够)
 }
 
 //fix float64 length
