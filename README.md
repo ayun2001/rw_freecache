@@ -9,16 +9,16 @@ freecache 因为其高效的性能获得很多人的喜爱，我也不例外。�
 1. 将Mutex 修改成 RWMutex  --> 并发性能极大的提高
 2. 去掉了segment访问时间计数器，重新添加平局访问计数器。（在 GetSummaryStatus 方法的返回值中）
 
-# 性能测试 （performance）CPU:i7 6650U ：
-    BenchmarkMapSet-4                           	 2000000	       916 ns/op
-    BenchmarkCacheSet-4                         	 3000000	       516 ns/op
-    BenchmarkCacheSetParallel-4                 	 5000000	       344 ns/op
-    BenchmarkMapGet-4                           	10000000	       249 ns/op
-    BenchmarkCacheGet-4                         	 5000000	       499 ns/op
-    BenchmarkCacheGetParallel-4                 	20000000	       140 ns/op
-    BenchmarkCacheGetWithExpiration-4           	 5000000	       518 ns/op
-    BenchmarkCacheGetWithExpirationParallel-4   	20000000	       194 ns/op
-    BenchmarkHashFunc-4                         	200000000	       7.77 ns/op
+# 性能测试 （performance）CPU:i5 4590 ：
+    BenchmarkMapSet-4                           	 2000000	       634 ns/op
+    BenchmarkCacheSet-4                         	 5000000	       407 ns/op
+    BenchmarkCacheSetParallel-4                 	10000000	       369 ns/op
+    BenchmarkMapGet-4                           	20000000	       165 ns/op
+    BenchmarkCacheGet-4                         	 5000000	       398 ns/op
+    BenchmarkCacheGetParallel-4                 	20000000	        89.8 ns/op
+    BenchmarkCacheGetWithExpiration-4           	 5000000	       459 ns/op
+    BenchmarkCacheGetWithExpirationParallel-4   	20000000	        83.1 ns/op
+    BenchmarkHashFunc-4                         	200000000	         7.29 ns/op
 
 # 使用例子： （和原 freecache 没有区别）
 

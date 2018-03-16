@@ -79,7 +79,8 @@ func NewCache(size int) (cache *Cache) {
 func (cache *Cache) Set(key, value []byte, expireSeconds int) (err error) {
 	hashVal := hashFunc(key)
 	segId := hashVal & 255
-	if cache.segments[segId].totalCount >= maxSegmentItemCount || cache.segments[segId].totalEvacuate >= maxSegmentItemCount {
+	if cache.segments[segId].totalCount >= maxSegmentItemCount ||
+		cache.segments[segId].totalEvacuate >= maxSegmentItemCount {
 		cache.segments[segId].clear()
 	}
 	err = cache.segments[segId].set(key, value, hashVal, expireSeconds)
@@ -90,6 +91,11 @@ func (cache *Cache) Set(key, value []byte, expireSeconds int) (err error) {
 func (cache *Cache) Get(key []byte) (value []byte, err error) {
 	hashVal := hashFunc(key)
 	segId := hashVal & 255
+	if cache.segments[segId].totalExpired >= maxSegmentItemCount ||
+		cache.segments[segId].missCount >= maxSegmentItemCount ||
+		cache.segments[segId].hitCount >= maxSegmentItemCount {
+		cache.segments[segId].clear()
+	}
 	value, _, err = cache.segments[segId].get(key, hashVal)
 	return
 }
@@ -98,6 +104,11 @@ func (cache *Cache) Get(key []byte) (value []byte, err error) {
 func (cache *Cache) GetWithExpiration(key []byte) (value []byte, expireAt uint32, err error) {
 	hashVal := hashFunc(key)
 	segId := hashVal & 255
+	if cache.segments[segId].totalExpired >= maxSegmentItemCount ||
+		cache.segments[segId].missCount >= maxSegmentItemCount ||
+		cache.segments[segId].hitCount >= maxSegmentItemCount {
+		cache.segments[segId].clear()
+	}
 	value, expireAt, err = cache.segments[segId].get(key, hashVal)
 	return
 }
