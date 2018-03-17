@@ -1,6 +1,7 @@
 package freecache
 
 import (
+	"fmt"
 	"time"
 	"math"
 	"unsafe"
@@ -8,6 +9,7 @@ import (
 	"encoding/binary"
 	"sync/atomic"
 	"github.com/cespare/xxhash"
+	"errors"
 )
 
 const (
@@ -15,20 +17,22 @@ const (
 	maxSegmentItemCount = int64(9223372036854775800 / 256)
 )
 
+var ErrLargeCounterValue = errors.New(fmt.Sprintf("The counter value is larger than %d", maxSegmentItemCount))
+
 type CacheSummaryStatus struct {
 	hit_count            int64 `json:"-"`
 	lookup_count         int64 `json:"-"`
 	expired_count        int64 `json:"-"`
 	evacuate_count       int64 `json:"-"`
-	TimeStamp            int64 `json:"time_stamp"`				//时间片
-	TimeSlice            int64 `json:"time_slice"`				//时间段 (两次读取之间的时间间隔)
-	ItemsCount           int64 `json:"items_count"`				//缓存中对象数量
-	HitRate              float64 `json:"hit_rate"`				//缓存命中率
-	AvgAccessTime        float64 `json:"avg_access_time"`			//缓存对象平均访问时间
-	AvgLookupPerSecond   float64 `json:"avg_lookup_per_second"`		//缓存每秒查询多少次
-	AvgHitPerSecond      float64 `json:"avg_hit_per_second"`		//缓存每秒击中对象多少次
-	AvgExpiredPerSecond  float64 `json:"avg_expired_per_second"`		//缓存每秒超时多少个对象
-	AvgEvacuatePerSecond float64 `json:"avg_evacuate_per_second"`		//缓存每秒因为空间不够导致清理的次数 (如果太大表示创建缓存的空间不够)
+	TimeStamp            int64 `json:"time_stamp"`                //时间片
+	TimeSlice            int64 `json:"time_slice"`                //时间段 (两次读取之间的时间间隔)
+	ItemsCount           int64 `json:"items_count"`               //缓存中对象数量
+	HitRate              float64 `json:"hit_rate"`                //缓存命中率
+	AvgAccessTime        float64 `json:"avg_access_time"`         //缓存对象平均访问时间
+	AvgLookupPerSecond   float64 `json:"avg_lookup_per_second"`   //缓存每秒查询多少次
+	AvgHitPerSecond      float64 `json:"avg_hit_per_second"`      //缓存每秒击中对象多少次
+	AvgExpiredPerSecond  float64 `json:"avg_expired_per_second"`  //缓存每秒超时多少个对象
+	AvgEvacuatePerSecond float64 `json:"avg_evacuate_per_second"` //缓存每秒因为空间不够导致清理的次数 (如果太大表示创建缓存的空间不够)
 }
 
 //fix float64 length
@@ -72,6 +76,7 @@ func NewCache(size int) (cache *Cache) {
 }
 
 // ===============================================================
+// byte当key
 
 // If the key is larger than 65535 or value is larger than 1/1024 of the cache size,
 // the entry will not be written to the cache. expireSeconds <= 0 means no expire,
@@ -95,6 +100,7 @@ func (cache *Cache) Get(key []byte) (value []byte, err error) {
 		cache.segments[segId].missCount >= maxSegmentItemCount ||
 		cache.segments[segId].hitCount >= maxSegmentItemCount {
 		cache.segments[segId].clear()
+		return nil, ErrLargeCounterValue
 	}
 	value, _, err = cache.segments[segId].get(key, hashVal)
 	return
@@ -108,6 +114,7 @@ func (cache *Cache) GetWithExpiration(key []byte) (value []byte, expireAt uint32
 		cache.segments[segId].missCount >= maxSegmentItemCount ||
 		cache.segments[segId].hitCount >= maxSegmentItemCount {
 		cache.segments[segId].clear()
+		return nil, 0, ErrLargeCounterValue
 	}
 	value, expireAt, err = cache.segments[segId].get(key, hashVal)
 	return
@@ -128,6 +135,7 @@ func (cache *Cache) Del(key []byte) (affected bool) {
 }
 
 // ===============================================================
+//字符串当key
 
 func (cache *Cache) SetStr(key string, value []byte, expireSeconds int) error {
 	return cache.Set(stringToBytes(key), value, expireSeconds)
@@ -154,6 +162,7 @@ func (cache *Cache) DelStr(key string) bool {
 }
 
 // ===============================================================
+//数字当key
 
 func (cache *Cache) SetInt(key int64, value []byte, expireSeconds int) error {
 	var bKey [8]byte
