@@ -169,8 +169,9 @@ func (seg *segment) evacuate(entryLen int64, slotId uint8, now uint32) (slotModi
 			seg.vacuumLen += oldEntryLen
 			continue
 		}
-		expired := oldHdr.expireAt != 0 && oldHdr.expireAt < now
-		if expired || consecutiveEvacuate > 5 {
+		expired := oldHdr.expireAt != 0 && oldHdr.expireAt <= now        //元素超时
+		randomKeyDelete := ((oldHdr.expireAt | now) & 3) == 3            //随机25%
+		if expired || randomKeyDelete || consecutiveEvacuate > 5 {
 			seg.delEntryPtr(oldHdr.slotId, oldHdr.hash16, oldOff)
 			if oldHdr.slotId == slotId {
 				slotModified = true
