@@ -34,25 +34,26 @@ type entryHdr struct {
 	deleted  bool
 	slotId   uint8
 	reserved uint16
+	_        uint32 //占位 4 bytes
 }
 
 // a segment contains 256 slots, a slot is an array of entry pointers ordered by hash16 value
 // the entry can be looked up by hash value of the key.
 type segment struct {
-	rb            RingBuf    // ring buffer that stores data
-	lock          *sync.RWMutex
+	rb            RingBuf       // ring buffer that stores data
+	lock          *sync.RWMutex //address is 32bit (4 bytes)
 	segId         int
 	hitCount      int64
 	missCount     int64
 	entryCount    int64
-	totalCount    int64      // number of entries in ring buffer, including deleted entries.
-	totalEvacuate int64      // used for debug
-	totalExpired  int64      // used for debug
-	overwrites    int64      // used for debug
-	vacuumLen     int64      // up to vacuumLen, new data can be written without overwriting old data.
-	slotLens      [256]int32 // The actual length for every slot.
-	slotCap       int32      // max number of entry pointers a slot can hold.
-	slotsData     []entryPtr // shared by all 256 slots
+	totalCount    int64         // number of entries in ring buffer, including deleted entries.
+	totalEvacuate int64         // used for debug
+	totalExpired  int64         // used for debug
+	overwrites    int64         // used for debug
+	vacuumLen     int64         // up to vacuumLen, new data can be written without overwriting old data.
+	slotLens      [256]int32    // The actual length for every slot.
+	slotCap       int32         // max number of entry pointers a slot can hold.
+	slotsData     []entryPtr    // shared by all 256 slots
 }
 
 func newSegment(bufSize int, segId int) (seg segment) {
