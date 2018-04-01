@@ -27,7 +27,7 @@ type CacheSummaryStatus struct {
 	TimeStamp            int64 `json:"time_stamp"`                //时间片
 	TimeSlice            int64 `json:"time_slice"`                //时间段 (两次读取之间的时间间隔)
 	ItemsCount           int64 `json:"items_count"`               //缓存中对象数量
-	HitRate              float64 `json:"hit_rate"`                //缓存命中率
+	ItemsHitRate         float64 `json:"items_hit_rate"`          //缓存对象命中率
 	AvgAccessTime        float64 `json:"avg_access_time"`         //缓存对象平均访问时间
 	AvgLookupPerSecond   float64 `json:"avg_lookup_per_second"`   //缓存每秒查询多少次
 	AvgHitPerSecond      float64 `json:"avg_hit_per_second"`      //缓存每秒击中对象多少次
@@ -85,6 +85,7 @@ func (cache *Cache) Set(key, value []byte, expireSeconds int) (err error) {
 	hashVal := hashFunc(key)
 	segId := hashVal & 255
 	if cache.segments[segId].totalCount >= maxSegmentItemCount ||
+		cache.segments[segId].overwrites >= maxSegmentItemCount ||
 		cache.segments[segId].totalEvacuate >= maxSegmentItemCount {
 		cache.segments[segId].clear()
 	}
@@ -259,7 +260,7 @@ func (cache *Cache) Clear() {
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
 	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ItemsCount = 0
-	cache.lastStatus.HitRate = 0
+	cache.lastStatus.ItemsHitRate = 0
 	cache.lastStatus.hit_count = 0
 	cache.lastStatus.lookup_count = 0
 	cache.lastStatus.evacuate_count = 0
@@ -273,7 +274,7 @@ func (cache *Cache) ResetStatistics() {
 	cache.lastStatus.TimeStamp = getCurrTimestamp()
 	cache.lastStatus.TimeSlice = 0
 	cache.lastStatus.ItemsCount = 0
-	cache.lastStatus.HitRate = 0
+	cache.lastStatus.ItemsHitRate = 0
 	cache.lastStatus.hit_count = 0
 	cache.lastStatus.lookup_count = 0
 	cache.lastStatus.evacuate_count = 0
@@ -299,10 +300,10 @@ func (cache *Cache) GetSummaryStatus() CacheSummaryStatus {
 		currentStatus.AvgExpiredPerSecond = float64ToFixed(float64(currentStatus.expired_count) / float64(currentStatus.TimeSlice), 3)
 		currentStatus.AvgEvacuatePerSecond = float64ToFixed(float64(currentStatus.evacuate_count) / float64(currentStatus.TimeSlice), 3)
 		if currentStatus.lookup_count > 0 {
-			currentStatus.HitRate = float64ToFixed(float64(currentStatus.hit_count) / float64(currentStatus.lookup_count), 3)
+			currentStatus.ItemsHitRate = float64ToFixed(float64(currentStatus.hit_count) / float64(currentStatus.lookup_count), 3)
 			currentStatus.AvgAccessTime = float64ToFixed((float64(currentStatus.TimeSlice) / float64(currentStatus.lookup_count)) * 1000, 3) //Microsecond
 		} else {
-			currentStatus.HitRate = 0
+			currentStatus.ItemsHitRate = 0
 			currentStatus.AvgAccessTime = 0
 		}
 		cache.lastStatus.TimeStamp = now

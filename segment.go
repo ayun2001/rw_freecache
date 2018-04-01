@@ -197,8 +197,8 @@ func (seg *segment) evacuate(entryLen int64, slotId uint8, now uint32) (slotModi
 func (seg *segment) get(key []byte, hashVal uint64) (value []byte, expireAt uint32, err error) {
 	slotId := uint8(hashVal >> 8)
 	hash16 := uint16(hashVal >> 16)
-	slotOff := int32(slotId) * seg.slotCap
 	seg.lock.RLock()
+	slotOff := int32(slotId) * seg.slotCap
 	var slot = seg.slotsData[slotOff: slotOff + seg.slotLens[slotId]: slotOff + seg.slotCap]
 	idx, match := seg.lookup(slot, hash16, key)
 	if !match {
@@ -237,8 +237,8 @@ func (seg *segment) get(key []byte, hashVal uint64) (value []byte, expireAt uint
 func (seg *segment) del(key []byte, hashVal uint64) (affected bool) {
 	slotId := uint8(hashVal >> 8)
 	hash16 := uint16(hashVal >> 16)
-	slotOff := int32(slotId) * seg.slotCap
 	seg.lock.Lock()
+	slotOff := int32(slotId) * seg.slotCap
 	slot := seg.slotsData[slotOff: slotOff + seg.slotLens[slotId]: slotOff + seg.slotCap]
 	idx, match := seg.lookup(slot, hash16, key)
 	if !match {
@@ -256,8 +256,8 @@ func (seg *segment) del(key []byte, hashVal uint64) (affected bool) {
 func (seg *segment) ttl(key []byte, hashVal uint64) (timeLeft uint32, err error) {
 	slotId := uint8(hashVal >> 8)
 	hash16 := uint16(hashVal >> 16)
-	slotOff := int32(slotId) * seg.slotCap
 	seg.lock.Lock()
+	slotOff := int32(slotId) * seg.slotCap
 	var slot = seg.slotsData[slotOff: slotOff + seg.slotLens[slotId]: slotOff + seg.slotCap]
 	idx, match := seg.lookup(slot, hash16, key)
 	if !match {
