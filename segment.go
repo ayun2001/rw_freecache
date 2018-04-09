@@ -1,4 +1,4 @@
-package freecache
+package rw_freecache
 
 import (
 	"errors"
