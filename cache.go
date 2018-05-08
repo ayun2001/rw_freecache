@@ -1,29 +1,29 @@
 package rw_freecache
 
 import (
-	"fmt"
-	"time"
-	"math"
-	"unsafe"
-	"reflect"
 	"encoding/binary"
-	"sync/atomic"
-	"github.com/cespare/xxhash"
 	"errors"
+	"fmt"
+	"github.com/cespare/xxhash"
+	"math"
+	"reflect"
+	"sync/atomic"
+	"time"
+	"unsafe"
 )
 
 const (
-	minBufSize = 512 * 1024
+	minBufSize          = 512 * 1024
 	maxSegmentItemCount = int64(9223372036854775800 / 256)
 )
 
 var ErrLargeCounterValue = errors.New(fmt.Sprintf("The counter value is larger than %d", maxSegmentItemCount))
 
 type CacheSummaryStatus struct {
-	hit_count            int64 `json:"-"`
-	lookup_count         int64 `json:"-"`
-	expired_count        int64 `json:"-"`
-	evacuate_count       int64 `json:"-"`
+	hit_count            int64   `json:"-"`
+	lookup_count         int64   `json:"-"`
+	expired_count        int64   `json:"-"`
+	evacuate_count       int64   `json:"-"`
 	TimeStamp            int64   //时间片
 	TimeSlice            int64   //时间段 (两次读取之间的时间间隔)
 	ItemsCount           int64   //缓存中对象数量
@@ -39,7 +39,7 @@ type CacheSummaryStatus struct {
 func float64ToFixed(f float64, places int) float64 {
 	shift := math.Pow(10, float64(places))
 	fv := 0.0000000001 + f //对浮点数产生.xxx999999999 计算不准进行处理
-	return math.Floor(fv * shift + .5) / shift
+	return math.Floor(fv*shift+.5) / shift
 }
 
 func stringToBytes(s string) []byte {
@@ -69,7 +69,7 @@ func NewCache(size int) (cache *Cache) {
 	}
 	cache = new(Cache)
 	for i := 0; i < 256; i++ {
-		cache.segments[i] = newSegment(size / 256, i)
+		cache.segments[i] = newSegment(size/256, i)
 	}
 	cache.lastStatus = CacheSummaryStatus{TimeStamp: getCurrTimestamp()}
 	return
@@ -242,7 +242,7 @@ func (cache *Cache) HitRate() float64 {
 	if lookupCount == 0 {
 		return 0
 	} else {
-		return float64ToFixed(float64(hitCount) / float64(lookupCount), 3)
+		return float64ToFixed(float64(hitCount)/float64(lookupCount), 3)
 	}
 }
 
@@ -295,13 +295,13 @@ func (cache *Cache) GetSummaryStatus() CacheSummaryStatus {
 		currentStatus.lookup_count = lookup_count - cache.lastStatus.lookup_count
 		currentStatus.evacuate_count = evacuate_count - cache.lastStatus.evacuate_count
 		currentStatus.expired_count = expired_count - cache.lastStatus.expired_count
-		currentStatus.AvgLookupPerSecond = float64ToFixed(float64(currentStatus.lookup_count) / float64(currentStatus.TimeSlice), 3)
-		currentStatus.AvgHitPerSecond = float64ToFixed(float64(currentStatus.hit_count) / float64(currentStatus.TimeSlice), 3)
-		currentStatus.AvgExpiredPerSecond = float64ToFixed(float64(currentStatus.expired_count) / float64(currentStatus.TimeSlice), 3)
-		currentStatus.AvgEvacuatePerSecond = float64ToFixed(float64(currentStatus.evacuate_count) / float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgLookupPerSecond = float64ToFixed(float64(currentStatus.lookup_count)/float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgHitPerSecond = float64ToFixed(float64(currentStatus.hit_count)/float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgExpiredPerSecond = float64ToFixed(float64(currentStatus.expired_count)/float64(currentStatus.TimeSlice), 3)
+		currentStatus.AvgEvacuatePerSecond = float64ToFixed(float64(currentStatus.evacuate_count)/float64(currentStatus.TimeSlice), 3)
 		if currentStatus.lookup_count > 0 {
-			currentStatus.ItemsHitRate = float64ToFixed(float64(currentStatus.hit_count) / float64(currentStatus.lookup_count), 3)
-			currentStatus.AvgAccessTime = float64ToFixed((float64(currentStatus.TimeSlice) / float64(currentStatus.lookup_count)) * 1000, 3) //Microsecond
+			currentStatus.ItemsHitRate = float64ToFixed(float64(currentStatus.hit_count)/float64(currentStatus.lookup_count), 3)
+			currentStatus.AvgAccessTime = float64ToFixed((float64(currentStatus.TimeSlice)/float64(currentStatus.lookup_count))*1000, 3) //Microsecond
 		} else {
 			currentStatus.ItemsHitRate = 0
 			currentStatus.AvgAccessTime = 0

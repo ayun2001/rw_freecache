@@ -53,7 +53,7 @@ func (it *Iterator) nextForSegment(segIdx int) *Entry {
 
 func (it *Iterator) nextForSlot(seg *segment, slotId int) *Entry {
 	slotOff := int32(it.slotIdx) * seg.slotCap
-	slot := seg.slotsData[slotOff: slotOff+seg.slotLens[it.slotIdx]: slotOff+seg.slotCap]
+	slot := seg.slotsData[slotOff : slotOff+seg.slotLens[it.slotIdx] : slotOff+seg.slotCap]
 	for it.entryIdx < len(slot) {
 		ptr := slot[it.entryIdx]
 		it.entryIdx++
